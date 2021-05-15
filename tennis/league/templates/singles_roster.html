@@ -1,0 +1,12 @@
+{%  for division in divisions.values %}
+    {% if division.list %}
+        <h1>{{division.name}}</h1>
+        {% for player in division.list %}
+            <p>{{player.player.player}}</p>
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+<h1> Coaching </h1>
+{%  for player in coaching %}
+    <p>{{  player.player }}</p>
+{% endfor %}

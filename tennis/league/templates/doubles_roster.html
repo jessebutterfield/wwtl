@@ -1,0 +1,8 @@
+{%  for division in divisions.values %}
+    {% if division.list %}
+        <h1>{{division.name}}</h1>
+        {% for team in division.list %}
+            <p>{{team.playerA.player}} - {{team.playerB.player}}</p>
+        {% endfor %}
+    {% endif %}
+{% endfor %}
