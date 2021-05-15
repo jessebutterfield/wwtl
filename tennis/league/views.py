@@ -1,12 +1,14 @@
 from collections import OrderedDict
 from typing import Iterable, Dict
 
+from django.contrib.auth.decorators import user_passes_test
 from django.http import HttpResponse
 from django.template import loader
 
 from .models import Divisions, Doubles, Singles, Season
 
 
+@user_passes_test(lambda user: user.is_superuser)
 def singles_roster(request, year):
     players: Iterable[Singles] = Singles.objects.filter(player__year=year).all()
     divisions: Dict[int, Dict] = OrderedDict()
@@ -19,6 +21,8 @@ def singles_roster(request, year):
     context = {'divisions': divisions, 'coaching': coaching}
     return HttpResponse(template.render(context, request))
 
+
+@user_passes_test(lambda user: user.is_superuser)
 def doubles_roster(request, year):
     teams: Iterable[Singles] = Doubles.objects.filter(playerA__year=year).all()
     divisions: Dict[int, Dict] = OrderedDict()
