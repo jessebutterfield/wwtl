@@ -21,6 +21,9 @@ class Season(models.Model):
     year = models.IntegerField()
     player = models.ForeignKey(Player, on_delete=models.CASCADE)
 
+    def doubles(self):
+        self.doublesA + self.doublesB
+
     def __str__(self):
         return f'{self.player}({self.year})'
 
@@ -50,8 +53,8 @@ class Singles(models.Model):
 
 
 class Doubles(models.Model):
-    playerA = models.ForeignKey(Season, on_delete=models.CASCADE, related_name='b_players')
-    playerB = models.ForeignKey(Season, on_delete=models.CASCADE, related_name='a_players')
+    playerA = models.ForeignKey(Season, on_delete=models.CASCADE, related_name='doublesA')
+    playerB = models.ForeignKey(Season, on_delete=models.CASCADE, related_name='doublesB')
     division = models.IntegerField(choices=Divisions.choices)
 
     def __str__(self):

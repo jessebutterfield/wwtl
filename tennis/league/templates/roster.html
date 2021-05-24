@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1 style="padding-left: 2em;">{{ year }} Roster</h1>
+    <div style="display: flex">
+        <div style="padding: 2em;">
+            <h1>Singles</h1>
+            {%  for division in singles.values %}
+                {% if division.list %}
+                    <h2>{{division.name}}</h2>
+                    {% for player in division.list %}
+                        <p>{{player.player.player}}</p>
+                    {% endfor %}
+                {% endif %}
+            {% endfor %}
+        </div>
+        <div style="padding: 2em;">
+            <h1>Doubles</h1>
+            {%  for division in doubles.values %}
+                {% if division.list %}
+                    <h2>{{division.name}}</h2>
+                    {% for team in division.list %}
+                        <p>{{team.playerA.player}} - {{team.playerB.player}}</p>
+                    {% endfor %}
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

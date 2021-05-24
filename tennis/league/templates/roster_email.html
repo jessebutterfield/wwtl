@@ -1,0 +1,76 @@
+<html lang="en">
+    <p>Hi {{ season.player }},</p>
+    <p>Welcome to the {{ year }} Women's Tennis League! You are signed up for: </p>
+    {% if season.doublesA.count == 0 and season.doublesB.count == 0 and season.singles_set.count == 0 %}
+        <p><strong>Coaching only</strong></p>
+    {%  endif %}
+    {% for singles in season.singles_set.all %}
+        <p><strong>{{ singles.get_division_display }} Singles</strong></p>
+    {% endfor %}
+    {% for doubles in season.doublesA.all %}
+        <p><strong>{{ doubles.get_division_display }} Doubles with {{ doubles.playerB.player }}</strong></p>
+    {% endfor %}
+    {% for doubles in season.doublesB.all %}
+        <p><strong>{{ doubles.get_division_display }} Doubles with {{ doubles.playerA.player }}</strong></p>
+    {% endfor %}
+
+    <p>We have your contact information as follows:</p>
+    <p> <strong>Address:</strong> {{ season.player.address }}, {{ season.player.city }} {{ season.player.state }} {{ season.player.zipcode }}</p>
+    {% if season.player.cell_phone %}<p><strong>Cell Phone: </strong>{{ season.player.cell_phone }}</p> {% endif %}
+    {% if season.player.home_phone %}<p><strong>Home Phone: </strong>{{ season.player.home_phone }}</p> {% endif %}
+    {% if season.player.work_phone %}<p><strong>Work Phone: </strong>{{ season.player.work_phone }}</p> {% endif %}
+    <p> If any of this information is incorrect, please reply to this email ASAP.</p>
+    <p>To see a full league roster, visit the new <a href="https://app.williamsportwomenstennisleague.com/league/roster/2021">WWTL website.</a></p>
+
+    <p>I am so excited about the 2021 season of the Williamsport Women’s Tennis League.
+        I want to thank everyone who has joined the League this year. We had a great response.
+        Thanks to everyone who spread the word on this fun organization. We have gained many new members,
+        some that are just starting out in the sport of
+        tennis and some that have played for some time. The total number of members this year is 123.
+    </p>
+    <p> Please check ASAP to make sure that your name, address, and phone numbers are correct.  Also check to
+        see that you are in the correct division, that you are listed for singles and/or doubles as
+        appropriate, and that the doubles partner (if any) that we have listed is correct. (If you are listed
+        under coaching, that simply means that you have paid your dues but are not playing any matches this
+        year.) If you find an error, you can reply to this email or you can call or text Joyce McRae at
+        570-772-2585. As soon as we are  sure that the roster is correct, the match cards will be made.
+    </p>
+    <p> The coaching sessions have already begun and many of you have already taken advantage of the opportunity.
+        Sessions run from May 11 to June 23rd. They are open to all League members and are set up by divisions.  Check the schedule that would apply to you. They are being held again at the tennis courts at Elm Park. Thank you to our Coach, Jessica Bower, for continuing to do a great job. If it rains and the Tennis Center is open, we will go to the Central PA Tennis Center. But if the tennis center is closed, the session will be made up at the same time on Thursday at Elm Park. Check the Williamsport Women’s Tennis League Facebook page for any updates.
+    </p>
+    <table>
+        <caption>WWTL 2021 Teaching/Coaching Sessions at Elm Park</caption>
+        <tr>
+            <td>Tuesday</td><td>8:30am - 10:30am or 6:15pm - 8:15pm</td><td>Beginner & All intermediate levels</td>
+        </tr>
+        <tr>
+            <td>Wednesday</td><td>8:30am - 10:30am or 6:15pm - 8:15pm</td><td>Advanced and high advanced</td>
+        </tr>
+    </table>
+    <p>If you are able to attend coaching sessions on the day that  your level is scheduled that is awesome.
+        But for some reason, you are not able to attend that session, please attend the other. You get 7
+        coaching sessions for the year with your membership.
+    </p>
+    <p>Match cards will be sent out by the end of May, we hope. As soon as you get your match cards,
+        please start scheduling your matches. We understand that scheduling is not always easy with
+        everyone’s busy summer plans. Please do your best to be courteous by returning phone calls and be
+        as flexible as possible.  We are asking to have all your matches in by August 22nd.
+        I would suggest that, if weather does not allow outdoor play, you consider calling the Central Pa
+        Tennis Center (570-326-2828) to play indoors. Hours are Monday to Friday 9-8 and Saturday and
+        Sunday 9-2.  $10.00/per person for doubles and $15.00 /person for singles.
+    </p>
+    <p>Again, I want to thank everyone who has helped me through this process.  Thank you to all the board
+        members for the invaluable input. To Sally and Jane for the relentless work on completing the roster.
+        Can’t thank you enough.
+    </p>
+    <p>
+    The By-Laws can be found on the Williamsport Women’s Tennis League website.
+    </p>
+    <p>
+        LET THE SEASON BEGIN<br/>
+        Respectfully,<br/>
+        Joyce McRae <br/>
+        President <br/>
+        570-772-2585
+    </p>
+</html>
