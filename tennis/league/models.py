@@ -7,9 +7,9 @@ class Player(models.Model):
     city = models.CharField(max_length=200)
     state = models.CharField(max_length=2)
     zipcode = models.CharField(max_length=10)
-    home_phone = models.CharField(max_length=20)
-    work_phone = models.CharField(max_length=20)
-    cell_phone = models.CharField(max_length=20)
+    home_phone = models.CharField(max_length=20, blank=True)
+    work_phone = models.CharField(max_length=20, blank=True)
+    cell_phone = models.CharField(max_length=20, blank=True)
     paper_mail = models.BooleanField()
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
