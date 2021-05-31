@@ -21,6 +21,9 @@ class Command(BaseCommand):
             singles_by_division[s.division].append(s)
         for d, player_list in singles_by_division.items():
             matches = self.generate_league(len(player_list))
+            for i, match_list in enumerate(matches):
+                assert len(match_list) == 6
+                assert i not in match_list
             random.shuffle(player_list)
             for i, match_list in enumerate(matches):
                 home_player = player_list[i]
@@ -34,7 +37,6 @@ class Command(BaseCommand):
         for d, player_list in doubles_by_division.items():
             matches = self.generate_league(len(player_list))
             for i, match_list in enumerate(matches):
-                print(match_list)
                 assert len(match_list) == 6
                 assert i not in match_list
             random.shuffle(player_list)
@@ -51,12 +53,12 @@ class Command(BaseCommand):
         for i in league_list:
             if len(matches[i]) < num_matches:
                 for j in range(len(matches[i]), num_matches):
+                    if next_match <= i:
+                        next_match = len(league_list) - 1
                     matches[i].add(next_match)
                     matches[next_match].add(i)
                     next_match -= 1
                     home = not home
-                    if next_match <= i:
-                        next_match = len(league_list) - 1
         return matches
 
     def generate_league(self, league_size: int) -> List[List[int]]:
