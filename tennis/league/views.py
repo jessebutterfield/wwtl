@@ -1,10 +1,10 @@
 from collections import OrderedDict
-from typing import Iterable, Dict
+from typing import Iterable, Dict, List
 
 from django.contrib.auth.decorators import user_passes_test
 from django.http import HttpResponse
 from django.template import loader
-from .send_emails import send_roster_emails
+from .send_emails import send_roster_emails, send_match_cards
 
 from .models import Divisions, Doubles, Singles, Season, SinglesMatch, ScoreKeepers
 
@@ -68,6 +68,27 @@ def match_card(request, year, division):
     context = {"opponents": opponents, "singles": singles, "score_keeper": score_keeper}
     template = loader.get_template('singles_match_card.html')
     return HttpResponse(template.render(context, request))
+
+
+@user_passes_test(lambda user: user.is_superuser)
+def send_singles_match_cards(request, year: int, division: int):
+    score_keeper = ScoreKeepers.objects.get(year=year,
+                                            division=division,
+                                            match_type=ScoreKeepers.SINGLES)
+    all_singles: List[Singles] = Singles.objects.filter(player__year=year, division=division) \
+        .prefetch_related("home_matches",
+                          "home_matches__away",
+                          "home_matches__away__player",
+                          "home_matches__away__player__player",
+                          "home_matches__away__player__player__user",
+                          "away_matches",
+                          "away_matches__home",
+                          "away_matches__home__player",
+                          "away_matches__home__player__player",
+                          "away_matches__home__player__player__user"
+                          ).all()
+    send_match_cards(all_singles, score_keeper)
+    return HttpResponse("ok")
 
 
 @user_passes_test(lambda user: user.is_superuser)

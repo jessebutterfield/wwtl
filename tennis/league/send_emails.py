@@ -4,7 +4,7 @@ from django.core.mail import get_connection, EmailMultiAlternatives
 from django.template.loader import get_template, render_to_string
 from django.utils.html import strip_tags
 
-from .models import Season
+from .models import Season, Divisions, Singles, ScoreKeepers
 
 
 def send_mass_html_mail(data_tuples: List[Tuple[str, str, str, str, str]], fail_silently=False, user=None, password=None,
@@ -40,3 +40,17 @@ def personalize_roster(year: int, season: Season) -> Tuple[str, str, str, str, s
     html_content = render_to_string('roster_email.html', context)
     text_content = strip_tags(html_content)
     return "2021 WWTL Season", text_content, html_content, "league@williamsportwomenstennisleague.com", season.player.user.email
+
+def send_match_cards(all_singles: List[Singles], score_keeper: ScoreKeepers):
+    data_tuples = [generate_email(singles, score_keeper) for singles in all_singles]
+    send_mass_html_mail(data_tuples)
+
+
+def generate_email(singles: Singles, score_keeper: ScoreKeepers) -> Tuple[str, str, str, str, str]:
+    home_matches = singles.home_matches.all()
+    away_matches = singles.away_matches.all()
+    opponents = [m.away for m in home_matches] + [m.home for m in away_matches]
+    context = {"opponents": opponents, "singles": singles, "score_keeper": score_keeper}
+    html_content = render_to_string('singles_match_card.html', context)
+    text_content = strip_tags(html_content)
+    return "2021 WWTL Match Card", text_content, html_content, "league@williamsportwomenstennisleague.com", singles.player.user.email
