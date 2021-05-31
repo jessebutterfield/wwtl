@@ -33,6 +33,10 @@ class Command(BaseCommand):
             doubles_by_division[d.division].append(d)
         for d, player_list in doubles_by_division.items():
             matches = self.generate_league(len(player_list))
+            for i, match_list in enumerate(matches):
+                print(match_list)
+                assert len(match_list) == 6
+                assert i not in match_list
             random.shuffle(player_list)
             for i, match_list in enumerate(matches):
                 home_player = player_list[i]
