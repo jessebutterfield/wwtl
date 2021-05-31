@@ -42,7 +42,7 @@ def personalize_roster(year: int, season: Season) -> Tuple[str, str, str, str, s
     return "2021 WWTL Season", text_content, html_content, "league@williamsportwomenstennisleague.com", season.player.user.email
 
 def send_match_cards(all_singles: List[Singles], score_keeper: ScoreKeepers):
-    data_tuples = [generate_email(singles, score_keeper) for singles in all_singles]
+    data_tuples = [generate_email(singles, score_keeper) for singles in all_singles if singles.player.player.user.email]
     send_mass_html_mail(data_tuples)
 
 
