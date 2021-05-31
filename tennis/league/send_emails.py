@@ -53,4 +53,4 @@ def generate_email(singles: Singles, score_keeper: ScoreKeepers) -> Tuple[str, s
     context = {"opponents": opponents, "singles": singles, "score_keeper": score_keeper}
     html_content = render_to_string('singles_match_card.html', context)
     text_content = strip_tags(html_content)
-    return "2021 WWTL Match Card", text_content, html_content, "league@williamsportwomenstennisleague.com", singles.player.user.email
+    return "2021 WWTL Match Card", text_content, html_content, "league@williamsportwomenstennisleague.com", singles.player.player.user.email
