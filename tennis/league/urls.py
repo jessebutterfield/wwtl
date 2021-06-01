@@ -13,5 +13,5 @@ urlpatterns = [
     path(r'singles_match_card/<int:year>/division/<int:division>', views.match_card),
     path(r'send_singles_match_card/<int:year>/division/<int:division>', views.send_singles_match_cards),
     path(r'doubles_match_card/<int:year>/division/<int:division>', views.doubles_match_card),
-    path(r'send_doubles_match_card/<int:year>/division/<int:division>', views.send_doubles_match_cards)
+    path(r'send_doubles_match_card/<int:year>/division/<int:division>', views.send_doubles_match_card)
 ]
