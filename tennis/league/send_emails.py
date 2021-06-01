@@ -1,13 +1,14 @@
 from typing import Iterable, List, Tuple
 
 from django.core.mail import get_connection, EmailMultiAlternatives
-from django.template.loader import get_template, render_to_string
+from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
-from .models import Season, Divisions, Singles, ScoreKeepers
+from .models import Doubles, Season, Singles, ScoreKeepers
 
 
-def send_mass_html_mail(data_tuples: List[Tuple[str, str, str, str, str]], fail_silently=False, user=None, password=None,
+def send_mass_html_mail(data_tuples: List[Tuple[str, str, str, str, List[str]]], fail_silently=False, user=None,
+                        password=None,
                         connection=None):
     """
     Given a datatuple of (subject, text_content, html_content, from_email,
@@ -24,9 +25,10 @@ def send_mass_html_mail(data_tuples: List[Tuple[str, str, str, str, str]], fail_
         username=user, password=password, fail_silently=fail_silently)
     messages = []
     for subject, text, html, from_email, recipient in data_tuples:
-        message = EmailMultiAlternatives(subject, text, from_email, [recipient])
-        message.attach_alternative(html, 'text/html')
-        messages.append(message)
+        if len(recipient) > 0:
+            message = EmailMultiAlternatives(subject, text, from_email, recipient)
+            message.attach_alternative(html, 'text/html')
+            messages.append(message)
     return connection.send_messages(messages)
 
 
@@ -35,22 +37,41 @@ def send_roster_emails(year: int, seasons: Iterable[Season]):
     send_mass_html_mail(data_tuples)
 
 
-def personalize_roster(year: int, season: Season) -> Tuple[str, str, str, str, str]:
+def personalize_roster(year: int, season: Season) -> Tuple[str, str, str, str, List[str]]:
     context = {'season': season, 'year': year}
     html_content = render_to_string('roster_email.html', context)
     text_content = strip_tags(html_content)
-    return "2021 WWTL Season", text_content, html_content, "league@williamsportwomenstennisleague.com", season.player.user.email
+    return "2021 WWTL Season", text_content, html_content, "league@williamsportwomenstennisleague.com", [
+        season.player.user.email]
+
 
 def send_match_cards(all_singles: List[Singles], score_keeper: ScoreKeepers):
     data_tuples = [generate_email(singles, score_keeper) for singles in all_singles if singles.player.player.user.email]
     send_mass_html_mail(data_tuples)
 
 
-def generate_email(singles: Singles, score_keeper: ScoreKeepers) -> Tuple[str, str, str, str, str]:
+def send_doubles_match_cards(all_doubles: List[Doubles], score_keeper: ScoreKeepers):
+    data_tuples = [generate_doubles_email(doubles, score_keeper) for doubles in all_doubles]
+    send_mass_html_mail(data_tuples)
+
+
+def generate_email(singles: Singles, score_keeper: ScoreKeepers) -> Tuple[str, str, str, str, List[str]]:
     home_matches = singles.home_matches.all()
     away_matches = singles.away_matches.all()
     opponents = [m.away for m in home_matches] + [m.home for m in away_matches]
     context = {"opponents": opponents, "singles": singles, "score_keeper": score_keeper}
     html_content = render_to_string('singles_match_card.html', context)
     text_content = strip_tags(html_content)
-    return "2021 WWTL Match Card", text_content, html_content, "league@williamsportwomenstennisleague.com", singles.player.player.user.email
+    return "2021 WWTL Match Card", text_content, html_content, \
+           "league@williamsportwomenstennisleague.com", [singles.player.player.user.email]
+
+
+def generate_doubles_email(doubles: Doubles, score_keeper: ScoreKeepers) -> Tuple[str, str, str, str, List[str]]:
+    home_matches = doubles.home_matches.all()
+    away_matches = doubles.away_matches.all()
+    opponents = [m.away for m in home_matches] + [m.home for m in away_matches]
+    context = {"opponents": opponents, "doubles": doubles, "score_keeper": score_keeper}
+    html_content = render_to_string('doubles_match_card.html', context)
+    text_content = strip_tags(html_content)
+    emails = [player.player.user.email for player in [doubles.playerA, doubles.playerB] if player.player.user.email]
+    return "2021 WWTL Match Card", text_content, html_content, "league@williamsportwomenstennisleague.com", emails

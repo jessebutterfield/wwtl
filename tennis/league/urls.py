@@ -11,5 +11,7 @@ urlpatterns = [
     path(r'roster/<int:year>', views.roster),
     path(r'send_season_emails/<int:year>', views.send_season_emails),
     path(r'singles_match_card/<int:year>/division/<int:division>', views.match_card),
-    path(r'send_singles_match_card/<int:year>/division/<int:division>', views.send_singles_match_cards)
+    path(r'send_singles_match_card/<int:year>/division/<int:division>', views.send_singles_match_cards),
+    path(r'doubles_match_card/<int:year>/division/<int:division>', views.doubles_match_card),
+    # path(r'send_singles_match_card/<int:year>/division/<int:division>', views.send_singles_match_cards)
 ]

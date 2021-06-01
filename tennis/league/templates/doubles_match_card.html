@@ -1,0 +1,50 @@
+<html lang="en">
+<h3>{{ doubles.playerA.player }} and {{ doubles.playerB.player }}</h3>
+<h3>{{ doubles.get_division_display }} Division</h3>
+<table style="border-collapse: collapse;">
+    <tbody>
+    <tr><th style="border-bottom: 3px solid black; padding: 12px;">Opponent Name</th>
+        <th style="border-bottom: 3px solid black; padding: 12px;">Home Phone #</th>
+        <th style="border-bottom: 3px solid black; padding: 12px;">Work Phone #</th>
+        <th style="border-bottom: 3px solid black; padding: 12px;">Cell Phone #</th>
+        <th style="border-bottom: 3px solid black; padding: 12px;">Email</th>
+        <th style="border-bottom: 3px solid black; padding: 12px;">Scores</th>
+    </tr>
+    {% for opp in opponents %}
+        <tr >
+            <td style="border-bottom: 2px solid black; padding: 12px;">
+                <div>{{ opp.playerA.player }}</div>
+                <div>{{ opp.playerB.player }}</div>
+            </td>
+            <td style="border-bottom: 2px solid black; padding: 12px;">
+                <div>{{ opp.playerA.player.home_phone}}&nbsp;</div>
+                <div>{{ opp.playerB.player.home_phone }}&nbsp;</div>
+            </td>
+            <td style="border-bottom: 2px solid black; padding: 12px;">
+                <div>{{ opp.playerA.player.work_phone }}&nbsp;</div>
+                <div>{{ opp.playerB.player.work_phone }}&nbsp;</div>
+            </td>
+            <td style="border-bottom: 2px solid black; padding: 12px;">
+                <div>{{ opp.playerA.player.cell_phone }}&nbsp;</div>
+                <div>{{ opp.playerB.player.cell_phone }}&nbsp;</div>
+            </td>
+            <td style="border-bottom: 2px solid black; padding: 12px; text-transform: lowercase">
+                <div>{{ opp.playerA.player.user.email }}&nbsp;</div>
+                <div>{{ opp.playerB.player.user.email }}&nbsp;</div>
+            </td>
+            <td style="border-bottom: 2px solid black; padding: 1px">
+                <div style="border:1px solid black; height:36px;width:120px;"></div>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+<p>Score Keeper: {{ score_keeper.player }} -
+    {% if score_keeper.player.cell_phone %}Cell # {{ score_keeper.player.cell_phone }} {% endif %}
+    {% if score_keeper.player.home_phone %}Home # {{ score_keeper.player.home_phone }} {% endif %}
+</p>
+<p>Scores must be reported to the score keeper by August 22.</p>
+<p>Due to changes in the software the league uses, we've had to change how to decide who brings the balls.
+    Both teams will bring balls and the winner will keep the unopened can.</p>
+
+</html>

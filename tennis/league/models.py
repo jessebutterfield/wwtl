@@ -111,3 +111,6 @@ class ScoreKeepers(models.Model):
         choices=MATCH_TYPE
     )
     player = models.ForeignKey(Player, on_delete=models.RESTRICT)
+
+    def __str__(self):
+        return f'{self.get_division_display()} {self.get_match_type_display()} {self.player}'

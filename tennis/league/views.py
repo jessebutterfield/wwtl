@@ -1,11 +1,11 @@
+import random
 from collections import OrderedDict
 from typing import Iterable, Dict, List
 
 from django.contrib.auth.decorators import user_passes_test
 from django.http import HttpResponse
 from django.template import loader
-from .send_emails import send_roster_emails, send_match_cards
-
+from .send_emails import send_roster_emails, send_match_cards, send_doubles_match_cards, generate_doubles_email
 from .models import Divisions, Doubles, Singles, Season, SinglesMatch, ScoreKeepers
 
 
@@ -89,6 +89,49 @@ def send_singles_match_cards(request, year: int, division: int):
                           ).all()
     send_match_cards(all_singles, score_keeper)
     return HttpResponse("ok")
+
+def doubles_with_prefetch(year: int, division: int) -> List[Doubles]:
+    return Doubles.objects.filter(playerA__year=year, division=division) \
+        .prefetch_related("home_matches",
+                          "home_matches__away",
+                          "home_matches__away__playerA",
+                          "home_matches__away__playerA__player",
+                          "home_matches__away__playerA__player__user",
+                          "home_matches__away__playerB",
+                          "home_matches__away__playerB__player",
+                          "home_matches__away__playerB__player__user",
+                          "away_matches",
+                          "away_matches__home",
+                          "away_matches__home__playerA",
+                          "away_matches__home__playerA__player",
+                          "away_matches__home__playerA__player__user",
+                          "away_matches",
+                          "away_matches__home",
+                          "away_matches__home__playerB",
+                          "away_matches__home__playerB__player",
+                          "away_matches__home__playerB__player__user"
+                          ).all()
+
+
+@user_passes_test(lambda user: user.is_superuser)
+def doubles_match_card(request, year: int, division: int):
+    all_doubles = doubles_with_prefetch(year, division)
+    score_keeper = ScoreKeepers.objects.get(year=year,
+                                            division=division,
+                                            match_type=ScoreKeepers.DOUBLES)
+    data_tuple = generate_doubles_email(random.choice(all_doubles), score_keeper)
+    print(f"Would send to {data_tuple[4]}")
+    return HttpResponse(data_tuple[2])
+
+
+@user_passes_test(lambda user: user.is_superuser)
+def send_doubles_match_card(request, year, division):
+    all_doubles = doubles_with_prefetch(year, division)
+    score_keeper = ScoreKeepers.objects.get(year=year,
+                                            division=division,
+                                            match_type=ScoreKeepers.DOUBLES)
+    send_doubles_match_cards(all_doubles, score_keeper)
+    return HttpResponse('ok')
 
 
 @user_passes_test(lambda user: user.is_superuser)
