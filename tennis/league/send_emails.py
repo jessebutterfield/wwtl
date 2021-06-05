@@ -46,7 +46,7 @@ def personalize_roster(year: int, season: Season) -> Tuple[str, str, str, str, L
 
 
 def send_match_cards(all_singles: List[Singles], score_keeper: ScoreKeepers):
-    data_tuples = [generate_email(singles, score_keeper) for singles in all_singles if singles.player.player.user.email]
+    data_tuples = [generate_singles_email(singles, score_keeper) for singles in all_singles if singles.player.player.user.email]
     send_mass_html_mail(data_tuples)
 
 
@@ -55,7 +55,7 @@ def send_doubles_match_cards(all_doubles: List[Doubles], score_keeper: ScoreKeep
     send_mass_html_mail(data_tuples)
 
 
-def generate_email(singles: Singles, score_keeper: ScoreKeepers) -> Tuple[str, str, str, str, List[str]]:
+def generate_singles_email(singles: Singles, score_keeper: ScoreKeepers) -> Tuple[str, str, str, str, List[str]]:
     home_matches = singles.home_matches.all()
     away_matches = singles.away_matches.all()
     opponents = [m.away for m in home_matches] + [m.home for m in away_matches]

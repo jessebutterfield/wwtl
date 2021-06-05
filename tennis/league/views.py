@@ -5,8 +5,8 @@ from typing import Iterable, Dict, List
 from django.contrib.auth.decorators import user_passes_test
 from django.http import HttpResponse
 from django.template import loader
-from .send_emails import send_roster_emails, send_match_cards, send_doubles_match_cards, generate_doubles_email
-from .models import Divisions, Doubles, Singles, Season, SinglesMatch, ScoreKeepers
+from .send_emails import send_roster_emails, send_match_cards, send_doubles_match_cards, generate_singles_email, generate_doubles_email
+from .models import Divisions, Doubles, Singles, Season, ScoreKeepers
 
 
 def singles_roster(request, year):
@@ -44,38 +44,8 @@ def roster(request, year):
     return HttpResponse(template.render(context, request))
 
 
-@user_passes_test(lambda user: user.is_superuser)
-def match_card(request, year, division):
-    all_singles = Singles.objects.filter(player__year=year, division=division)\
-        .prefetch_related("home_matches",
-                           "home_matches__away",
-                           "home_matches__away__player",
-                           "home_matches__away__player__player",
-                           "home_matches__away__player__player__user",
-                           "away_matches",
-                           "away_matches__home",
-                           "away_matches__home__player",
-                           "away_matches__home__player__player",
-                           "away_matches__home__player__player__user"
-                           ).all()
-    singles: Singles = all_singles[0]
-    home_matches = singles.home_matches.all()
-    away_matches = singles.away_matches.all()
-    opponents = [m.away for m in home_matches] + [m.home for m in away_matches]
-    score_keeper = ScoreKeepers.objects.get(year=singles.player.year,
-                                            division=division,
-                                            match_type=ScoreKeepers.SINGLES)
-    context = {"opponents": opponents, "singles": singles, "score_keeper": score_keeper}
-    template = loader.get_template('singles_match_card.html')
-    return HttpResponse(template.render(context, request))
-
-
-@user_passes_test(lambda user: user.is_superuser)
-def send_singles_match_cards(request, year: int, division: int):
-    score_keeper = ScoreKeepers.objects.get(year=year,
-                                            division=division,
-                                            match_type=ScoreKeepers.SINGLES)
-    all_singles: List[Singles] = Singles.objects.filter(player__year=year, division=division) \
+def prefetched_singles(year: int, division: int) -> List[Singles]:
+    return Singles.objects.filter(player__year=year, division=division) \
         .prefetch_related("home_matches",
                           "home_matches__away",
                           "home_matches__away__player",
@@ -87,6 +57,32 @@ def send_singles_match_cards(request, year: int, division: int):
                           "away_matches__home__player__player",
                           "away_matches__home__player__player__user"
                           ).all()
+
+@user_passes_test(lambda user: user.is_superuser)
+def match_card(request, year, division):
+    all_singles = prefetched_singles(year, division)
+    score_keeper = ScoreKeepers.objects.get(year=year,
+                                            division=division,
+                                            match_type=ScoreKeepers.SINGLES)
+    singles_id = request.GET.get('id')
+    selected_singles = None
+    if singles_id:
+        for d in all_singles:
+            if d.id == int(singles_id):
+                selected_singles = d
+    if not selected_singles:
+        selected_doubles = random.choice(all_singles)
+    data_tuple = generate_singles_email(selected_singles, score_keeper)
+    print(f"Would send to {data_tuple[4]}")
+    return HttpResponse(data_tuple[2])
+
+
+@user_passes_test(lambda user: user.is_superuser)
+def send_singles_match_cards(request, year: int, division: int):
+    score_keeper = ScoreKeepers.objects.get(year=year,
+                                            division=division,
+                                            match_type=ScoreKeepers.SINGLES)
+    all_singles = prefetched_singles(year, division)
     send_match_cards(all_singles, score_keeper)
     return HttpResponse("ok")
 
@@ -119,7 +115,15 @@ def doubles_match_card(request, year: int, division: int):
     score_keeper = ScoreKeepers.objects.get(year=year,
                                             division=division,
                                             match_type=ScoreKeepers.DOUBLES)
-    data_tuple = generate_doubles_email(random.choice(all_doubles), score_keeper)
+    doubles_id = request.GET.get('id')
+    selected_doubles = None
+    if doubles_id:
+        for d in all_doubles:
+            if d.id == int(doubles_id):
+                selected_doubles = d
+    if not selected_doubles:
+        selected_doubles = random.choice(all_doubles)
+    data_tuple = generate_doubles_email(selected_doubles, score_keeper)
     print(f"Would send to {data_tuple[4]}")
     return HttpResponse(data_tuple[2])
 
