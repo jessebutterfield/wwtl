@@ -1,12 +1,15 @@
 import random
-from collections import OrderedDict
-from typing import Iterable, Dict, List
+from collections import OrderedDict, defaultdict
+from typing import Iterable, Dict, List, Tuple
 
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import user_passes_test, login_required
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
+from django.db.models import Q
+from django.shortcuts import redirect, reverse
 from django.template import loader
 from .send_emails import send_roster_emails, send_match_cards, send_doubles_match_cards, generate_singles_email, generate_doubles_email
-from .models import Divisions, Doubles, Singles, Season, ScoreKeepers
+from .models import Divisions, Doubles, DoubleSet, Singles, SingleSet, Season, ScoreKeepers, SinglesMatch, DoublesMatch
 
 
 def singles_roster(request, year):
@@ -71,7 +74,7 @@ def match_card(request, year, division):
             if d.id == int(singles_id):
                 selected_singles = d
     if not selected_singles:
-        selected_doubles = random.choice(all_singles)
+        selected_singles = random.choice(all_singles)
     data_tuple = generate_singles_email(selected_singles, score_keeper)
     print(f"Would send to {data_tuple[4]}")
     return HttpResponse(data_tuple[2])
@@ -166,4 +169,87 @@ def send_season_emails(request, year):
     send_roster_emails(year, seasons)
     return HttpResponse("ok")
 
+
+@login_required()
+def scorer_view(request, year: int):
+    if request.user.is_superuser:
+        user_id = request.GET['user_id']
+        score_keeper = ScoreKeepers.objects.get(player__user_id=user_id, year=year)
+    else:
+        try:
+            score_keeper = ScoreKeepers.objects.get(player__user=request.user, year=year)
+        except ScoreKeepers.DoesNotExist:
+            raise PermissionDenied
+    if score_keeper.match_type == ScoreKeepers.SINGLES:
+        players = Singles.objects.filter(player__year=year, division=score_keeper.division).all()
+    else:
+        players = Doubles.objects.filter(playerA__year=year, division=score_keeper.division).all()
+    template = loader.get_template('keeper_list.html')
+    context = {'score_keeper': score_keeper, 'players': players}
+    return HttpResponse(template.render(context, request))
+
+@login_required()
+def show_scores(request, match_type: str, team_id: int):
+    if match_type == 'singles':
+        team_model = Singles
+        match_model = SinglesMatch
+        set_model = SingleSet
+    else:
+        team_model = Doubles
+        match_model = DoublesMatch
+        set_model = DoubleSet
+    us = team_model.objects.get(id=team_id)
+    matches = match_model.objects.filter(Q(home_id=team_id) | Q(away_id=team_id)).all()
+    all_sets = set_model.objects.filter(match__in=matches).all()
+    template = loader.get_template('report_scores.html')
+    opponents = {m.id: m.away if m.home_id == team_id else m.home for m in matches}
+    parsed_sets = defaultdict(lambda: defaultdict(dict))
+    for s in all_sets:
+        set_data = {
+            'us': s.home if s.match.home_id == team_id else s.away,
+            'them': s.away if s.match.home_id == team_id else s.home,
+            'usTB': s.tie_break_home if s.match.home_id == team_id else s.tie_break_away,
+            'themTB': s.tie_break_away if s.match.home_id == team_id else s.tie_break_home
+        }
+        parsed_sets[s.match_id][s.set_number] = set_data
+    context = {'sets': parsed_sets, 'opponents': opponents, 'us': us, 'team_id': team_id, "match_type": match_type}
+    return HttpResponse(template.render(context, request))
+
+
+@login_required()
+def update_scores(request, match_type: str, team_id: int):
+    scores = defaultdict(lambda: defaultdict(dict))
+    for key, value in request.POST.items():
+        if key.startswith("match"):
+            split = key.split("/")
+            scores[split[1]][int(split[2])][split[3]] = int(value) if value else None
+    if match_type == 'singles':
+        set_type = SingleSet
+        team_model = Singles
+    else:
+        set_type = DoubleSet
+        team_model = Doubles
+    for match_id, set_map in scores.items():
+        for set_number, score_map in set_map.items():
+            if score_map['us'] is not None:
+                old_set, _ = set_type.objects.get_or_create(match_id=match_id, set_number=set_number)
+                if old_set.match.home_id == team_id:
+                    old_set.home = score_map['us']
+                    old_set.away = score_map['them']
+                    old_set.tie_break_home = score_map['usTB']
+                    old_set.tie_break_away = score_map['themTB']
+                else:
+                    old_set.home = score_map['them']
+                    old_set.away = score_map['us']
+                    old_set.tie_break_home = score_map['themTB']
+                    old_set.tie_break_away = score_map['usTB']
+                old_set.save()
+            else:
+                set_type.objects.filter(match_id=match_id, set_number=set_number).delete()
+    team = team_model.objects.get(id=team_id)
+    url = "/league/score_keeper/" + str(team.year())
+    if request.user.is_superuser:
+        score_keeper = ScoreKeepers.objects.get(year=team.year(), division=team.division, match_type=match_type[0].upper())
+        url += "?user_id=" + str(score_keeper.player.user_id)
+    return redirect(url)
 

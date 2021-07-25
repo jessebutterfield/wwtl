@@ -13,5 +13,8 @@ urlpatterns = [
     path(r'singles_match_card/<int:year>/division/<int:division>', views.match_card),
     path(r'send_singles_match_card/<int:year>/division/<int:division>', views.send_singles_match_cards),
     path(r'doubles_match_card/<int:year>/division/<int:division>', views.doubles_match_card),
-    path(r'send_doubles_match_card/<int:year>/division/<int:division>', views.send_doubles_match_card)
+    path(r'send_doubles_match_card/<int:year>/division/<int:division>', views.send_doubles_match_card),
+    path(r'score_keeper/<int:year>', views.scorer_view, name="score_keeper"),
+    path(r'<str:match_type>/scores/<int:team_id>', views.show_scores, name="show_scores"),
+    path(r'<str:match_type>/report_scores/<int:team_id>', views.update_scores, name="report_scores")
 ]

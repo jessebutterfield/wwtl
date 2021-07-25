@@ -51,6 +51,12 @@ class Singles(models.Model):
     player = models.ForeignKey(Season, on_delete=models.CASCADE)
     division = models.IntegerField(choices=Divisions.choices)
 
+    def player_name(self):
+        return self.player.player
+
+    def year(self):
+        return self.player.year
+
     def __str__(self):
         return f'{self.player} - {Divisions.get_name(self.division)}'
 
@@ -59,6 +65,12 @@ class Doubles(models.Model):
     playerA = models.ForeignKey(Season, on_delete=models.CASCADE, related_name='doublesA')
     playerB = models.ForeignKey(Season, on_delete=models.CASCADE, related_name='doublesB')
     division = models.IntegerField(choices=Divisions.choices)
+
+    def player_name(self):
+        return f'{self.playerA.player}/{self.playerB.player}'
+
+    def year(self):
+        return self.playerA.year
 
     def __str__(self):
         return f'{self.playerA.player}/{self.playerB.player}({self.playerA.year}) - {Divisions.get_name(self.division)}'
@@ -80,10 +92,11 @@ class DoublesMatch(models.Model):
         return f'{self.home.playerA.player}/{self.home.playerB.player} v {self.away.playerA.player}/{self.away.playerB.player}'
 
 class MatchSet(models.Model):
-    home = models.IntegerField()
-    away = models.IntegerField()
-    tie_break_home = models.IntegerField()
-    tie_break_away = models.IntegerField()
+    home = models.IntegerField(null=True)
+    away = models.IntegerField(null=True)
+    tie_break_home = models.IntegerField(null=True)
+    tie_break_away = models.IntegerField(null=True)
+    set_number = models.IntegerField()
 
     class Meta:
         abstract = True

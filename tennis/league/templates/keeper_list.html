@@ -1,0 +1,6 @@
+<ul>
+{%  for player in players %}
+    <li style="padding: 4px">
+        <a href="/league/{{ score_keeper.get_match_type_display.lower }}/scores/{{ player.id }}"> {{ player.player_name }}</a></li>
+{% endfor %}
+</ul>

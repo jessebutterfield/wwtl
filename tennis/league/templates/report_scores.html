@@ -1,0 +1,94 @@
+{% load league_helpers %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Report Scores</title>
+</head>
+<body onload="onload()">
+<script>
+    function onScoreChange(matchId, setId){
+        const scoreSum = parseInt(document.getElementsByName(`match/${matchId}/${setId}/them`)[0].value) + parseInt(document.getElementsByName(`match/${matchId}/${setId}/us`)[0].value);
+        if (scoreSum === 13){
+            document.getElementsByClassName(`tb[${matchId}][${setId}]`)[0].style.visibility = "visible"
+            document.getElementsByClassName(`tb[${matchId}][${setId}]`)[1].style.visibility = "visible"
+        }
+        else {
+            document.getElementsByClassName(`tb[${matchId}][${setId}]`)[0].style.visibility = "hidden"
+            document.getElementsByClassName(`tb[${matchId}][${setId}]`)[1].style.visibility = "hidden"
+            document.getElementsByName(`match/${matchId}/${setId}/themTB`)[0].value = undefined
+            document.getElementsByName(`match/${matchId}/${setId}/usTB`)[0].value = undefined
+        }
+    }
+    function onload(){
+        {% for match_id in opponents.keys %}
+            {% for set_id in '012'|make_list %}
+                onScoreChange({{ match_id }}, {{ set_id }})
+            {% endfor %}
+        {% endfor %}
+    }
+</script>
+<form action="{% url 'league:report_scores' match_type us.id %}" method="POST">
+    {% csrf_token %}
+<table style="font-size: 18pt;border-collapse: collapse;">
+    <thead>
+        <tr><td>Match</td><td>Set 1</td><td>Set 2</td><td>Set 3</td></tr>
+    </thead>
+    {% for match_id, opp in opponents.items %}
+        <tr >
+            <td style="padding-top: 3px;padding-top: 6px; border-top: 2px solid black">
+                {{ us.player_name }}
+            </td>
+            {% for set_id in '012'|make_list %}
+                <td style="border-top: 2px solid black">
+                    <input
+                        tabindex="{% tabindex forloop.parentloop.counter set_id 0 %}"
+                        oninput="onScoreChange({{ match_id }}, {{ set_id }})"
+                        style="font-size: 18px; height: 24pt; width: 32pt"
+                        name="match/{{ match_id }}/{{ set_id }}/us"
+                        type="number" max="7" min="0" step="1" size="4"
+                        value="{% get_score sets match_id set_id "us" %}"
+                    />
+                    <span class="tb[{{ match_id }}][{{ set_id }}]" style="visibility: hidden;">(
+                        <input tabindex="{% tabindex forloop.parentloop.counter set_id 2 %}"
+                               style="font-size: 12px; height: 18pt; width: 24pt"
+                               name="match/{{ match_id }}/{{ set_id }}/usTB"
+                               type="number" min="0" step="1" size="4"
+                               value="{% get_score sets match_id set_id "usTB" %}"
+                        />)
+                    </span>
+                </td>
+            {%  endfor %}
+        </tr>
+        <tr>
+            <td style="padding-top: 6px; padding-bottom: 3px; border-bottom: 2px solid black">
+                {{ opp.player_name }}
+            </td>
+            {% for set_id in '012'|make_list %}
+                <td style="border-bottom: 2px solid black">
+                    <input
+                        tabindex="{% tabindex forloop.parentloop.counter set_id 1 %}"
+                        oninput="onScoreChange({{ match_id }}, {{ set_id }})"
+                        style="font-size: 18px; height: 24pt; width: 32pt"
+                        name="match/{{ match_id }}/{{ set_id }}/them"
+                        type="number" max="7" min="0" step="1" size="4"
+                        value="{% get_score sets match_id set_id "them" %}"
+                    />
+                    <span class="tb[{{ match_id }}][{{ set_id }}]" style="visibility: hidden;">(
+                        <input tabindex="{% tabindex forloop.parentloop.counter set_id 3 %}"
+                               style="font-size: 12px; height: 18pt; width: 24pt"
+                               name="match/{{ match_id }}/{{ set_id }}/themTB"
+                               type="number" min="0" step="1" size="4"
+                               value="{% get_score sets match_id set_id "themTB" %}"
+                        />)
+                    </span>
+                </td>
+            {%  endfor %}
+        </tr>
+    {% endfor %}
+</table>
+    <p>If you enter a score of 7-6, a box will appear for the tie-breaker.</p>
+    <input type="submit" value="SAVE">
+</form>
+</body>
+</html>
