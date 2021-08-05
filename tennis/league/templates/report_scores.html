@@ -8,7 +8,7 @@
 <body onload="onload()">
 <script>
     function onScoreChange(matchId, setId){
-        const scoreSum = parseInt(document.getElementsByName(`match/${matchId}/${setId}/them`)[0].value) + parseInt(document.getElementsByName(`match/${matchId}/${setId}/us`)[0].value);
+        const scoreSum = parseInt(document.getElementsByName(`match/${matchId}/${setId}/them`)[0].value) + parseInt(document.getElementsByName(`match/${matchId}/${setId}/us`)[0].value)
         if (scoreSum === 13){
             document.getElementsByClassName(`tb[${matchId}][${setId}]`)[0].style.visibility = "visible"
             document.getElementsByClassName(`tb[${matchId}][${setId}]`)[1].style.visibility = "visible"
@@ -16,11 +16,45 @@
         else {
             document.getElementsByClassName(`tb[${matchId}][${setId}]`)[0].style.visibility = "hidden"
             document.getElementsByClassName(`tb[${matchId}][${setId}]`)[1].style.visibility = "hidden"
-            document.getElementsByName(`match/${matchId}/${setId}/themTB`)[0].value = undefined
-            document.getElementsByName(`match/${matchId}/${setId}/usTB`)[0].value = undefined
+            document.getElementsByName(`match/${matchId}/${setId}/themTB`)[0].value = ""
+            document.getElementsByName(`match/${matchId}/${setId}/usTB`)[0].value = ""
         }
     }
+
+    function onMarkForfeit(matchId, winner){
+        const checkbox = document.getElementsByName(`match/${matchId}/forfeit/${winner}`)[0]
+        const checked = checkbox.checked
+        if(checked){
+            //TODO: Clear all the values, disable all inputs, unmark the other checkbox
+            {% for set_id in '012'|make_list %}
+                document.getElementsByName(`match/${matchId}/{{set_id}}/them`)[0].value = ""
+                document.getElementsByName(`match/${matchId}/{{set_id}}/us`)[0].value = ""
+                document.getElementsByName(`match/${matchId}/{{set_id}}/them`)[0].disabled = true
+                document.getElementsByName(`match/${matchId}/{{set_id}}/us`)[0].disabled = true
+                document.getElementsByName(`match/${matchId}/{{set_id}}/themTB`)[0].value = ""
+                document.getElementsByName(`match/${matchId}/{{set_id}}/usTB`)[0].value = ""
+                onScoreChange(matchId, {{ set_id }})
+            {% endfor %}
+            if(winner === 'us'){
+                document.getElementsByName(`match/${matchId}/forfeit/them`)[0].checked = false
+            }
+            else {
+                document.getElementsByName(`match/${matchId}/forfeit/us`)[0].checked = false
+            }
+        }
+        else {
+            {% for set_id in '012'|make_list %}
+                document.getElementsByName(`match/${matchId}/{{set_id}}/them`)[0].disabled = false
+                document.getElementsByName(`match/${matchId}/{{set_id}}/us`)[0].disabled = false
+            {% endfor %}
+        }
+    }
+
     function onload(){
+        {%  for match_id, winner in forfeits.items %}
+            document.getElementsByName("match/{{ match_id }}/forfeit/{{ winner }}")[0].checked = true
+            onMarkForfeit({{ match_id }}, "{{ winner }}")
+        {% endfor %}
         {% for match_id in opponents.keys %}
             {% for set_id in '012'|make_list %}
                 onScoreChange({{ match_id }}, {{ set_id }})
@@ -32,7 +66,7 @@
     {% csrf_token %}
 <table style="font-size: 18pt;border-collapse: collapse;">
     <thead>
-        <tr><td>Match</td><td>Set 1</td><td>Set 2</td><td>Set 3</td></tr>
+        <tr><td>Match</td><td>Set 1</td><td>Set 2</td><td>Set 3</td><td>Forfeit<br/>Win</td></tr>
     </thead>
     {% for match_id, opp in opponents.items %}
         <tr >
@@ -59,6 +93,7 @@
                     </span>
                 </td>
             {%  endfor %}
+            <td style="border-top: 2px solid black"> <input oninput="onMarkForfeit({{ match_id }}, 'us')" type="checkbox" name="match/{{ match_id }}/forfeit/us"></td>
         </tr>
         <tr>
             <td style="padding-top: 6px; padding-bottom: 3px; border-bottom: 2px solid black">
@@ -84,6 +119,7 @@
                     </span>
                 </td>
             {%  endfor %}
+            <td style="border-bottom: 2px solid black"> <input oninput="onMarkForfeit({{ match_id }}, 'them')" type="checkbox" name="match/{{ match_id }}/forfeit/them"></td>
         </tr>
     {% endfor %}
 </table>

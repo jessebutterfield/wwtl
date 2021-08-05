@@ -9,7 +9,8 @@ from django.db.models import Q
 from django.shortcuts import redirect, reverse
 from django.template import loader
 from .send_emails import send_roster_emails, send_match_cards, send_doubles_match_cards, generate_singles_email, generate_doubles_email
-from .models import Divisions, Doubles, DoubleSet, Singles, SingleSet, Season, ScoreKeepers, SinglesMatch, DoublesMatch
+from .models import Divisions, Doubles, DoubleSet, Singles, SingleSet, Season, ScoreKeepers, SinglesMatch, DoublesMatch, \
+    GenericMatch
 
 
 def singles_roster(request, year):
@@ -173,7 +174,12 @@ def send_season_emails(request, year):
 @login_required()
 def scorer_view(request, year: int):
     if request.user.is_superuser:
-        user_id = request.GET['user_id']
+        user_id = request.GET.get('user_id')
+        if user_id is None:
+            score_keepers = ScoreKeepers.objects.filter(year=year)
+            context = {"score_keepers": score_keepers, "year": year}
+            template = loader.get_template('all_keepers.html')
+            return HttpResponse(template.render(context, request))
         score_keeper = ScoreKeepers.objects.get(player__user_id=user_id, year=year)
     else:
         try:
@@ -204,6 +210,7 @@ def show_scores(request, match_type: str, team_id: int):
     template = loader.get_template('report_scores.html')
     opponents = {m.id: m.away if m.home_id == team_id else m.home for m in matches}
     parsed_sets = defaultdict(lambda: defaultdict(dict))
+    forfeits = {m.id: 'us' if m.forfeitWin == GenericMatch.HOME and m.home_id == team_id else 'them' for m in matches if m.forfeitWin}
     for s in all_sets:
         set_data = {
             'us': s.home if s.match.home_id == team_id else s.away,
@@ -212,40 +219,59 @@ def show_scores(request, match_type: str, team_id: int):
             'themTB': s.tie_break_away if s.match.home_id == team_id else s.tie_break_home
         }
         parsed_sets[s.match_id][s.set_number] = set_data
-    context = {'sets': parsed_sets, 'opponents': opponents, 'us': us, 'team_id': team_id, "match_type": match_type}
+    print(forfeits)
+    context = {'forfeits': forfeits, 'sets': parsed_sets, 'opponents': opponents, 'us': us, 'team_id': team_id, "match_type": match_type}
     return HttpResponse(template.render(context, request))
 
 
 @login_required()
 def update_scores(request, match_type: str, team_id: int):
     scores = defaultdict(lambda: defaultdict(dict))
+    forfeits: Dict[str, str] = {}
     for key, value in request.POST.items():
         if key.startswith("match"):
             split = key.split("/")
-            scores[split[1]][int(split[2])][split[3]] = int(value) if value else None
+            if split[2] == 'forfeit':
+                forfeits[split[1]] = split[2]
+            else:
+                scores[split[1]][int(split[2])][split[3]] = int(value) if value else None
     if match_type == 'singles':
+        match_class = SinglesMatch
         set_type = SingleSet
         team_model = Singles
     else:
+        match_class = DoublesMatch
         set_type = DoubleSet
         team_model = Doubles
     for match_id, set_map in scores.items():
-        for set_number, score_map in set_map.items():
-            if score_map['us'] is not None:
-                old_set, _ = set_type.objects.get_or_create(match_id=match_id, set_number=set_number)
-                if old_set.match.home_id == team_id:
-                    old_set.home = score_map['us']
-                    old_set.away = score_map['them']
-                    old_set.tie_break_home = score_map['usTB']
-                    old_set.tie_break_away = score_map['themTB']
-                else:
-                    old_set.home = score_map['them']
-                    old_set.away = score_map['us']
-                    old_set.tie_break_home = score_map['themTB']
-                    old_set.tie_break_away = score_map['usTB']
-                old_set.save()
+        match = match_class.objects.get(id=match_id)
+        if match_id in forfeits:
+            if match.home_id == team_id and forfeits[match_id] == 'us':
+                match.forfeitWin = GenericMatch.HOME
             else:
-                set_type.objects.filter(match_id=match_id, set_number=set_number).delete()
+                match.forfeitWin = GenericMatch.AWAY
+            match.save()
+            set_type.objects.filter(match_id=match_id).delete()
+        else:
+            match.forfeitWin = None
+            match.save()
+            for set_number in range(0, 3):
+                score_map = set_map[set_number]
+                if score_map.get('us') is not None:
+                    old_set, _ = set_type.objects.get_or_create(match_id=match_id, set_number=set_number)
+                    if match.home_id == team_id:
+                        old_set.home = score_map['us']
+                        old_set.away = score_map['them']
+                        old_set.tie_break_home = score_map['usTB']
+                        old_set.tie_break_away = score_map['themTB']
+                    else:
+                        old_set.home = score_map['them']
+                        old_set.away = score_map['us']
+                        old_set.tie_break_home = score_map['themTB']
+                        old_set.tie_break_away = score_map['usTB']
+                    old_set.save()
+                else:
+                    set_type.objects.filter(match_id=match_id, set_number=set_number).delete()
     team = team_model.objects.get(id=team_id)
     url = "/league/score_keeper/" + str(team.year())
     if request.user.is_superuser:

@@ -76,7 +76,25 @@ class Doubles(models.Model):
         return f'{self.playerA.player}/{self.playerB.player}({self.playerA.year}) - {Divisions.get_name(self.division)}'
 
 
-class SinglesMatch(models.Model):
+class GenericMatch(models.Model):
+    HOME = "H"
+    AWAY = "A"
+    VICTOR = [
+        (HOME, 'Home'),
+        (AWAY, 'Away'),
+    ]
+    forfeitWin = models.CharField(
+        max_length=1,
+        choices=VICTOR,
+        null=True
+    )
+
+    class Meta:
+        abstract = True
+
+
+class SinglesMatch(GenericMatch):
+
     home = models.ForeignKey(Singles, on_delete=models.CASCADE, related_name='home_matches')
     away = models.ForeignKey(Singles, on_delete=models.CASCADE, related_name='away_matches')
 
@@ -84,12 +102,13 @@ class SinglesMatch(models.Model):
         return f'{self.home.player} v {self.away.player}'
 
 
-class DoublesMatch(models.Model):
+class DoublesMatch(GenericMatch):
     home = models.ForeignKey(Doubles, on_delete=models.CASCADE, related_name='home_matches')
     away = models.ForeignKey(Doubles, on_delete=models.CASCADE, related_name='away_matches')
 
     def __str__(self):
         return f'{self.home.playerA.player}/{self.home.playerB.player} v {self.away.playerA.player}/{self.away.playerB.player}'
+
 
 class MatchSet(models.Model):
     home = models.IntegerField(null=True)

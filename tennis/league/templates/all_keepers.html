@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Score Keepers</title>
+</head>
+<body>
+<ul>
+    {%  for score_keeper in score_keepers %}
+        <li style="padding: 4px">
+            <a href="/league/score_keeper/{{ year }}?user_id={{ score_keeper.player.user_id }}"> {{ score_keeper.player }}</a></li>
+    {% endfor %}
+</ul>
+</body>
+</html>
