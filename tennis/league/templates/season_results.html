@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Results</title>
+</head>
+<body>
+<h1 style="text-transform: capitalize">{{ year }} {{ match_type }} {{ division }}</h1>
+<table style="font-size: 18pt;border-collapse: collapse;">
+    <thead>
+    <tr>
+        <td style="padding: 1em; border: 2px black">Team</td>
+        <td style="padding: 1em; border: 2px black">Wins</td>
+        <td style="padding: 1em; border: 2px black">Losses</td>
+        <td style="padding: 1em; border: 2px black">Forfeit Wins</td>
+        <td style="padding: 1em; border: 2px black">Forfeit Losses</td>
+    </tr>
+    </thead>
+<tbody>
+    {% for team_record in results %}
+        <tr>
+            <td style="padding: 1em; border: 2px solid black">{{ team_record.team.player_name }}</td>
+            <td style="padding: 1em; border: 2px solid black">{{ team_record.record.wins }}</td>
+            <td style="padding: 1em; border: 2px solid black">{{ team_record.record.losses }}</td>
+            <td style="padding: 1em; border: 2px solid black">{{ team_record.record.forfeit_wins }}</td>
+            <td style="padding: 1em; border: 2px solid black">{{ team_record.record.forfeit_losses }}</td>
+        </tr>
+    {% endfor %}
+</tbody>
+
+</body>
+</html>

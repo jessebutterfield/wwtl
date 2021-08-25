@@ -1,3 +1,5 @@
+from typing import Iterable
+
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -92,6 +94,9 @@ class GenericMatch(models.Model):
     class Meta:
         abstract = True
 
+    def sets(self) -> Iterable['MatchSet']:
+        return []
+
 
 class SinglesMatch(GenericMatch):
 
@@ -101,6 +106,9 @@ class SinglesMatch(GenericMatch):
     def __str__(self):
         return f'{self.home.player} v {self.away.player}'
 
+    def sets(self):
+        return self.singleset_set.all()
+
 
 class DoublesMatch(GenericMatch):
     home = models.ForeignKey(Doubles, on_delete=models.CASCADE, related_name='home_matches')
@@ -109,6 +117,8 @@ class DoublesMatch(GenericMatch):
     def __str__(self):
         return f'{self.home.playerA.player}/{self.home.playerB.player} v {self.away.playerA.player}/{self.away.playerB.player}'
 
+    def sets(self):
+        return self.doubleset_set.all()
 
 class MatchSet(models.Model):
     home = models.IntegerField(null=True)

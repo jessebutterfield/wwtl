@@ -1,6 +1,7 @@
 import random
 from collections import OrderedDict, defaultdict
-from typing import Iterable, Dict, List, Tuple
+from dataclasses import dataclass
+from typing import Iterable, Dict, List, Tuple, Union
 
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.core.exceptions import PermissionDenied
@@ -210,7 +211,7 @@ def show_scores(request, match_type: str, team_id: int):
     template = loader.get_template('report_scores.html')
     opponents = {m.id: m.away if m.home_id == team_id else m.home for m in matches}
     parsed_sets = defaultdict(lambda: defaultdict(dict))
-    forfeits = {m.id: 'us' if m.forfeitWin == GenericMatch.HOME and m.home_id == team_id else 'them' for m in matches if m.forfeitWin}
+    forfeits = {m.id: forfeit_to_us(m, team_id) for m in matches if m.forfeitWin}
     for s in all_sets:
         set_data = {
             'us': s.home if s.match.home_id == team_id else s.away,
@@ -219,10 +220,29 @@ def show_scores(request, match_type: str, team_id: int):
             'themTB': s.tie_break_away if s.match.home_id == team_id else s.tie_break_home
         }
         parsed_sets[s.match_id][s.set_number] = set_data
-    print(forfeits)
     context = {'forfeits': forfeits, 'sets': parsed_sets, 'opponents': opponents, 'us': us, 'team_id': team_id, "match_type": match_type}
     return HttpResponse(template.render(context, request))
 
+def forfeit_to_us(match: Union[SinglesMatch, DoublesMatch], team_id: int):
+    if team_id == match.home_id:
+        if match.forfeitWin == GenericMatch.HOME:
+            return 'us'
+        return 'them'
+    else:
+        if match.forfeitWin == GenericMatch.HOME:
+            return 'them'
+        return 'us'
+
+
+def us_to_forfeit(match: Union[SinglesMatch, DoublesMatch], team_id: int, us_them: str):
+    if team_id == match.home_id:
+        if us_them == 'us':
+            return GenericMatch.HOME
+        return GenericMatch.AWAY
+    else:
+        if us_them == 'us':
+            return GenericMatch.AWAY
+        return GenericMatch.HOME
 
 @login_required()
 def update_scores(request, match_type: str, team_id: int):
@@ -246,10 +266,7 @@ def update_scores(request, match_type: str, team_id: int):
     for match_id, set_map in scores.items():
         match = match_class.objects.get(id=match_id)
         if match_id in forfeits:
-            if match.home_id == team_id and forfeits[match_id] == 'us':
-                match.forfeitWin = GenericMatch.HOME
-            else:
-                match.forfeitWin = GenericMatch.AWAY
+            match.forfeitWin = us_to_forfeit(match, team_id, forfeits[match_id])
             match.save()
             set_type.objects.filter(match_id=match_id).delete()
         else:
@@ -278,4 +295,41 @@ def update_scores(request, match_type: str, team_id: int):
         score_keeper = ScoreKeepers.objects.get(year=team.year(), division=team.division, match_type=match_type[0].upper())
         url += "?user_id=" + str(score_keeper.player.user_id)
     return redirect(url)
+
+@dataclass
+class Record:
+    """Class for keeping track of an item in inventory."""
+    wins: int = 0
+    forfeit_wins: int = 0
+    losses: int = 0
+    forfeit_losses: int = 0
+
+@login_required()
+def season_results(request, year: int, division: int, match_type: str):
+    if match_type == 'singles':
+        matches = SinglesMatch.objects.filter(home__division=division, home__player__year=year).all()
+    else:
+        matches = DoublesMatch.objects.filter(home__division=division, home__playerA__year=year).all()
+    records = defaultdict(Record)
+    for match in matches:
+        if match.forfeitWin == GenericMatch.HOME:
+            records[match.home].forfeit_wins += 1
+            records[match.away].forfeit_losses += 1
+        elif match.forfeitWin == GenericMatch.AWAY:
+            records[match.home].forfeit_losses += 1
+            records[match.away].forfeit_wins += 1
+        else:
+            if len(match.sets()) > 0:
+                home_sets = sum([int(s.home > s.away) for s in match.sets()])
+                if home_sets == 2:
+                    records[match.home].wins += 1
+                    records[match.away].losses += 1
+                else:
+                    records[match.home].losses += 1
+                    records[match.away].wins += 1
+    results = [{"team": team, "record": record} for team, record in records.items()]
+    results = sorted(results, key=lambda x: (x["record"].forfeit_wins + x["record"].wins, x["record"].wins), reverse=True)
+    context = {"results": results, "year": year, "match_type": match_type, "division": matches[0].home.get_division_display}
+    template = loader.get_template('season_results.html')
+    return HttpResponse(template.render(context, request))
 
