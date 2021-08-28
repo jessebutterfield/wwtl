@@ -252,7 +252,7 @@ def update_scores(request, match_type: str, team_id: int):
         if key.startswith("match"):
             split = key.split("/")
             if split[2] == 'forfeit':
-                forfeits[split[1]] = split[2]
+                forfeits[split[1]] = split[3]
             else:
                 scores[split[1]][int(split[2])][split[3]] = int(value) if value else None
     if match_type == 'singles':
