@@ -17,5 +17,9 @@ urlpatterns = [
     path(r'score_keeper/<int:year>', views.scorer_view, name="score_keeper"),
     path(r'<str:match_type>/scores/<int:team_id>', views.show_scores, name="show_scores"),
     path(r'<str:match_type>/report_scores/<int:team_id>', views.update_scores, name="report_scores"),
-    path(r'<str:match_type>/<int:year>/division/<int:division>/results', views.season_results, name="season_results")
+    path(r'<str:match_type>/<int:year>/division/<int:division>/results', views.season_results, name="season_results"),
+    path(r'new_season/<int:year>', views.new_season, name="new_season"),
+    path(r'sign_up/<int:year>/players/<int:player_id>', views.sign_up, name="sign_up"),
+    path(r'players', views.create_player, name="create_player"),
+
 ]

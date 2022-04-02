@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sign up {{ year }} Season</title>
+</head>
+<body>
+    <h1>Sign Up for the {{ year }} Season</h1>
+    <form action="/league/sign_up/{{ year }}/players/{{ player.id }}" method="post">
+        {% csrf_token %}
+        <div>
+            <label for="first_name">First Name</label>
+            <input type="text" id="first_name" name="first_name" value="{{ player.user.first_name }}">
+        </div>
+        <div>
+            <label for="last_name">Last Name</label>
+            <input type="text" id="last_name" name="last_name" value="{{ player.user.last_name }}">
+        </div>
+        <div>
+            <label for="email">Email</label>
+            <input type="text" id="email" name="email" value="{{ player.user.email }}">
+        </div>
+        <div>
+            <label for="address">Street Address</label>
+            <input type="text" id="address" name="address" size="50" value="{{ player.address }}">
+        </div>
+        <div>
+            <label for="city">City</label>
+            <input type="text" id="city" name="city" value="{{ player.city }}">
+            <label for="state">State</label>
+            <input type="text" id="state" name="state" value="{{ player.state }}">
+            <label for="zipcode">Zip Code</label>
+            <input type="text" id="zipcode" name="zipcode" value="{{ player.zipcode }}">
+        </div>
+        <div>
+        <label for="cell_phone">Cell Phone</label>
+        <input type="text" id="cell_phone" name="cell_phone" value="{{ player.cell_phone }}">
+        <label for="home_phone">Home Phone</label>
+        <input type="text" id="home_phone" name="home_phone" value="{{ player.home_phone }}">
+        <label for="work_phone">Work Phone</label>
+        <input type="text" id="work_phone" name="work_phone" value="{{ player.work_phone }}">
+        </div>
+        <h2>Coaching Only</h2>
+        <div>
+            <label for="coaching_only">Coaching Only</label>
+            <input type="checkbox" id="coaching_only" name="coaching_only" {% if season and not doubles and not singles %} checked {% endif %}>
+        </div>
+        <h2>Singles</h2>
+        <div>
+            <label for="singles">Playing</label>
+            <input type="checkbox" id="singles" name="singles" {% if singles %} checked {% endif %}>
+            <label for="singles_division">Division</label>
+            <select id="singles_division" name="singles_division">
+                {% for d in divisions %}
+                    <option
+                            {% if singles%}
+                                {% if singles.division == d %}
+                                    selected
+                                {% endif %}
+                            {% elif last_singles %}
+                                {% if last_singles.get_division_display == d %}
+                                    selected
+                                {% endif %}
+                            {% endif %}
+                    >{{ d }}</option>
+                {% endfor %}
+
+            </select>
+        </div>
+        <div>Last Played: {{ last_singles }}</div>
+        <h2>Doubles</h2>
+        <div>
+            <label for="doubles">Playing</label>
+            <input type="checkbox" name="doubles" id="doubles" {% if doubles %} checked {% endif %}>
+            <label for="doubles_division">Division</label>
+            <select id="doubles_division" name="doubles_division">
+                {% for d in divisions %}
+                    <option
+                            {% if doubles%}
+                                {% if doubles.division == d %}
+                                    selected
+                                {% endif %}
+                            {% elif last_doubles %}
+                                {% if last_doubles.get_division_display == d %}
+                                    selected
+                                {% endif %}
+                            {% endif %}
+                    >{{ d }}</option>
+                {% endfor %}
+            </select>
+            <label for="doubles_partner">Partner</label>
+            <input list="partners" id="doubles_partner" name="doubles_partner" value="{{ last_partner }}">
+            <datalist id="partners">
+                {% for p in possible_partners %}
+                    <option>{{ p }}</option>
+                {% endfor %}
+            </datalist>
+        </div>
+        <div>Last Played: {{ last_doubles }}</div>
+        <input type="submit">
+    </form>
+</body>
+</html>
+

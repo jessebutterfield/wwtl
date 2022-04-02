@@ -6,18 +6,22 @@ from typing import Iterable, Dict, List, Tuple, Union
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
-from django.db.models import Q
+from django.db.models import Q, Value
+from django.db.models.functions import Concat
 from django.shortcuts import redirect, reverse
+from django.contrib.auth.models import User
 from django.template import loader
-from .send_emails import send_roster_emails, send_match_cards, send_doubles_match_cards, generate_singles_email, generate_doubles_email
+from .send_emails import send_roster_emails, send_match_cards, send_doubles_match_cards, generate_singles_email, \
+    generate_doubles_email
 from .models import Divisions, Doubles, DoubleSet, Singles, SingleSet, Season, ScoreKeepers, SinglesMatch, DoublesMatch, \
-    GenericMatch
+    GenericMatch, Player
 
 
 def singles_roster(request, year):
     players: Iterable[Singles] = Singles.objects.filter(player__year=year).all()
     singles = group_by_division(players)
-    coaching: Iterable[Season] = Season.objects.filter(year=year, singles__isnull=True, doublesA__isnull=True, doublesB__isnull=True).all()
+    coaching: Iterable[Season] = Season.objects.filter(year=year, singles__isnull=True, doublesA__isnull=True,
+                                                       doublesB__isnull=True).all()
     template = loader.get_template('singles_roster.html')
     context = {'divisions': singles, 'coaching': coaching}
     return HttpResponse(template.render(context, request))
@@ -30,6 +34,7 @@ def doubles_roster(request, year):
     context = {'divisions': doubles}
     return HttpResponse(template.render(context, request))
 
+
 def group_by_division(players):
     divisions: Dict[int, Dict] = OrderedDict()
     for i, name in Divisions.choices:
@@ -40,9 +45,11 @@ def group_by_division(players):
 
 
 def roster(request, year):
-    players: Iterable[Singles] = Singles.objects.filter(player__year=year).order_by('player__player__user__last_name').all()
+    players: Iterable[Singles] = Singles.objects.filter(player__year=year).order_by(
+        'player__player__user__last_name').all()
     singles = group_by_division(players)
-    teams: Iterable[Doubles] = Doubles.objects.filter(playerA__year=year).order_by('playerA__player__user__last_name').all()
+    teams: Iterable[Doubles] = Doubles.objects.filter(playerA__year=year).order_by(
+        'playerA__player__user__last_name').all()
     doubles = group_by_division(teams)
     template = loader.get_template('roster.html')
     context = {'doubles': doubles, 'singles': singles, 'year': year}
@@ -62,6 +69,7 @@ def prefetched_singles(year: int, division: int) -> List[Singles]:
                           "away_matches__home__player__player",
                           "away_matches__home__player__player__user"
                           ).all()
+
 
 @user_passes_test(lambda user: user.is_superuser)
 def match_card(request, year, division):
@@ -90,6 +98,7 @@ def send_singles_match_cards(request, year: int, division: int):
     all_singles = prefetched_singles(year, division)
     send_match_cards(all_singles, score_keeper)
     return HttpResponse("ok")
+
 
 def doubles_with_prefetch(year: int, division: int) -> List[Doubles]:
     return Doubles.objects.filter(playerA__year=year, division=division) \
@@ -195,6 +204,7 @@ def scorer_view(request, year: int):
     context = {'score_keeper': score_keeper, 'players': players}
     return HttpResponse(template.render(context, request))
 
+
 @login_required()
 def show_scores(request, match_type: str, team_id: int):
     if match_type == 'singles':
@@ -220,8 +230,10 @@ def show_scores(request, match_type: str, team_id: int):
             'themTB': s.tie_break_away if s.match.home_id == team_id else s.tie_break_home
         }
         parsed_sets[s.match_id][s.set_number] = set_data
-    context = {'forfeits': forfeits, 'sets': parsed_sets, 'opponents': opponents, 'us': us, 'team_id': team_id, "match_type": match_type}
+    context = {'forfeits': forfeits, 'sets': parsed_sets, 'opponents': opponents, 'us': us, 'team_id': team_id,
+               "match_type": match_type}
     return HttpResponse(template.render(context, request))
+
 
 def forfeit_to_us(match: Union[SinglesMatch, DoublesMatch], team_id: int):
     if team_id == match.home_id:
@@ -243,6 +255,7 @@ def us_to_forfeit(match: Union[SinglesMatch, DoublesMatch], team_id: int, us_the
         if us_them == 'us':
             return GenericMatch.AWAY
         return GenericMatch.HOME
+
 
 @login_required()
 def update_scores(request, match_type: str, team_id: int):
@@ -292,9 +305,11 @@ def update_scores(request, match_type: str, team_id: int):
     team = team_model.objects.get(id=team_id)
     url = "/league/score_keeper/" + str(team.year())
     if request.user.is_superuser:
-        score_keeper = ScoreKeepers.objects.get(year=team.year(), division=team.division, match_type=match_type[0].upper())
+        score_keeper = ScoreKeepers.objects.get(year=team.year(), division=team.division,
+                                                match_type=match_type[0].upper())
         url += "?user_id=" + str(score_keeper.player.user_id)
     return redirect(url)
+
 
 @dataclass
 class Record:
@@ -303,6 +318,7 @@ class Record:
     forfeit_wins: int = 0
     losses: int = 0
     forfeit_losses: int = 0
+
 
 @login_required()
 def season_results(request, year: int, division: int, match_type: str):
@@ -328,8 +344,164 @@ def season_results(request, year: int, division: int, match_type: str):
                     records[match.home].losses += 1
                     records[match.away].wins += 1
     results = [{"team": team, "record": record} for team, record in records.items()]
-    results = sorted(results, key=lambda x: (x["record"].forfeit_wins + x["record"].wins, x["record"].wins), reverse=True)
-    context = {"results": results, "year": year, "match_type": match_type, "division": matches[0].home.get_division_display}
-    template = loader.get_template('season_results.html')
+    results = sorted(results, key=lambda x: (x["record"].forfeit_wins + x["record"].wins, x["record"].wins),
+                     reverse=True)
+    context = {"results": results, "year": year, "match_type": match_type,
+               "division": matches[0].home.get_division_display}
+    template = loader.get_template("season_results.html")
     return HttpResponse(template.render(context, request))
 
+
+def new_season(request, year: int):
+    players = Player.objects.order_by("user__last_name", "user__first_name").select_related("user").all()
+    current_season = {s.player_id for s in Season.objects.filter(year=year).all()}
+    previous_season = {s.player_id for s in Season.objects.filter(year=year - 1).all()}
+    current_players = []
+    previous_season_players = []
+    did_not_play = []
+    print(players[0].id in previous_season)
+    for p in players:
+        if p.id in current_season:
+            current_players.append(p)
+        elif p.id in previous_season:
+            previous_season_players.append(p)
+        else:
+            did_not_play.append(p)
+    context = {"year": year, "current_players": current_players, "last_year": previous_season_players,
+               "did_not_play": did_not_play}
+    template = loader.get_template("new_season.html")
+    return HttpResponse(template.render(context, request))
+
+
+def sign_up(request, year: int, player_id: int):
+    if request.method == "GET":
+        return sign_up_form(request, year, player_id)
+    else:
+        return handle_sign_up(request, year, player_id)
+
+
+def sign_up_form(request, year: int, player_id: int):
+    player = Player.objects.get(id=player_id)
+    players = Player.objects.exclude(id=player_id).order_by("user__last_name", "user__first_name").select_related(
+        "user").all()
+    try:
+        season = Season.objects.get(player_id=player_id, year=year)
+    except Season.DoesNotExist:
+        season = None
+    singles = None
+    doubles = None
+    if season:
+        try:
+            singles_model = Singles.objects.get(player=season)
+            singles = {"division": singles_model.get_division_display}
+        except Singles.DoesNotExist:
+            pass
+        try:
+            doubles_model = Doubles.objects.get(playerA=season)
+            doubles = {"division": doubles_model.get_division_display, "partner": doubles_model.playerB.player}
+        except Doubles.DoesNotExist:
+            try:
+                doubles_model = Doubles.objects.get(playerB=season)
+                doubles = {"division": doubles_model.get_division_display, "partner": doubles_model.playerB.player}
+            except Doubles.DoesNotExist:
+                pass
+    try:
+        last_singles = Singles.objects.filter(player__player=player, player__year__lt=year).order_by("-player__year")[0]
+    except IndexError:
+        last_singles = None
+
+    try:
+        last_doubles = \
+        Doubles.objects.filter(Q(playerA__player=player) | Q(playerB__player=player), playerA__year__lt=year).order_by(
+            "-playerA__year")[0]
+    except IndexError:
+        last_doubles = None
+
+    if doubles:
+        last_partner = doubles["partner"]
+    elif last_doubles:
+        if last_doubles.playerA.player_id == player_id:
+            last_partner = last_doubles.playerB.player
+        else:
+            last_partner = last_doubles.playerA.player
+    else:
+        last_partner = None
+
+    context = {"year": year,
+               "player": player,
+               "season": season,
+               "singles": singles,
+               "last_singles": last_singles,
+               "last_doubles": last_doubles,
+               "last_partner": last_partner,
+               "doubles": doubles,
+               "divisions": [d[1] for d in Divisions.choices],
+               "possible_partners": players
+               }
+
+    template = loader.get_template("sign_up.html")
+    return HttpResponse(template.render(context, request))
+
+
+def handle_sign_up(request, year: int, player_id: int):
+    params = request.POST
+    print(params)
+    player = Player.objects.get(id=player_id)
+    player.address = params.get("address")
+    player.state = params.get("state")
+    player.zipcode = params.get("zipcode")
+    player.cell_phone = params.get("cell_phone")
+    player.home_phone = params.get("home_phone")
+    player.work_phone = params.get("work_phone")
+    player.save()
+    user = player.user
+    user.first_name = params.get("first_name")
+    user.last_name = params.get("last_name")
+    user.email = params.get("email")
+    if params.get("email"):
+        user.username = params.get("email")
+    user.save()
+    playing = bool(params.get('doubles') or params.get('singles') or params.get('coaching_only'))
+    if playing:
+        season, _ = Season.objects.get_or_create(player_id=player_id, year=year)
+        if params.get('singles'):
+            division_name = params.get("singles_division")
+            division = next(value[0] for value in Divisions.choices if value[1] == division_name)
+            try:
+                singles = Singles.objects.get(player=season)
+                singles.division = division
+                singles.save()
+            except Singles.DoesNotExist:
+                Singles.objects.create(player=season, division=division)
+        else:
+            Singles.objects.filter(player=season).delete()
+        if params.get('doubles'):
+            division_name = params.get("doubles_division")
+            division = next(value[0] for value in Divisions.choices if value[1] == division_name)
+            partner_query = Player.objects.annotate(full_name=Concat('user__first_name', Value(' '), 'user__last_name'))
+            partner = partner_query.get(full_name=params.get('doubles_partner'))
+            partner_season, _ = Season.objects.get_or_create(player_id=partner.id, year=year)
+            try:
+                doubles = Doubles.objects.get(Q(playerA=season) | Q(playerB=season))
+                doubles.division = division
+                if doubles.playerA == season:
+                    doubles.playerB = partner_season
+                else:
+                    doubles.playerA = partner_season
+            except Doubles.DoesNotExist:
+                Doubles.objects.create(playerA=season, playerB=partner_season, division=division)
+        else:
+            Doubles.objects.filter(Q(playerA=season) | Q(playerB=season)).delete()
+    else:
+        Season.objects.filter(player_id=player_id, year=year).delete()
+
+    return redirect("/league/new_season/" + str(year))
+
+def create_player(request):
+    params = request.POST
+    first_name = params.get("first_name")
+    last_name = params.get("last_name")
+    user = User(first_name=first_name, last_name=last_name, username=f"{first_name.lower()}_{last_name.lower()}")
+    user.save()
+    player = Player.objects.create(user=user, paper_mail=False)
+    return redirect(f"/league/sign_up/{params.get('year')}/players/{player.id}")

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New {{ year }} Season</title>
+</head>
+<body>
+    <h1>{{ year }} Signups </h1>
+    <h2>Add New Player</h2>
+    <form action="/league/players" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="year" value="{{ year }}">
+        <div>
+            <label for="first_name">First Name</label>
+            <input type="text" id="first_name" name="first_name" value="{{ player.user.first_name }}">
+            <label for="last_name">Last Name</label>
+            <input type="text" id="last_name" name="last_name" value="{{ player.user.last_name }}">
+            <input type="submit">
+        </div>
+    </form>
+    <h2 id="signedUp">Signed Up</h2>
+    <div>
+    {% for player in current_players %}
+        <div>
+            <a href="/league/sign_up/{{ year }}/players/{{ player.id }}">{{ player }}</a>
+        </div>
+    {% endfor %}
+    </div>
+
+    <h2 id="signedUp">Played Last Season</h2>
+    <div>
+    {% for player in last_year %}
+        <div>
+            <a href="/league/sign_up/{{ year }}/players/{{ player.id }}">{{ player }}</a>
+        </div>
+    {% endfor %}
+    </div>
+    <h2 id="signedUp">Did Not Play Last Season</h2>
+    <div>
+    {% for player in did_not_play %}
+        <div>
+            <a href="/league/sign_up/{{ year }}/players/{{ player.id }}">{{ player }}</a>
+        </div>
+    {% endfor %}
+    </div>
+</body>
