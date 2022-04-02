@@ -404,7 +404,7 @@ def sign_up_form(request, year: int, player_id: int):
         except Doubles.DoesNotExist:
             try:
                 doubles_model = Doubles.objects.get(playerB=season)
-                doubles = {"division": doubles_model.get_division_display, "partner": doubles_model.playerB.player}
+                doubles = {"division": doubles_model.get_division_display, "partner": doubles_model.playerA.player}
             except Doubles.DoesNotExist:
                 pass
     try:
