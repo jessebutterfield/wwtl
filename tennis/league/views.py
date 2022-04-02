@@ -352,6 +352,7 @@ def season_results(request, year: int, division: int, match_type: str):
     return HttpResponse(template.render(context, request))
 
 
+@user_passes_test(lambda user: user.is_staff)
 def new_season(request, year: int):
     players = Player.objects.order_by("user__last_name", "user__first_name").select_related("user").all()
     current_season = {s.player_id for s in Season.objects.filter(year=year).all()}
@@ -373,6 +374,7 @@ def new_season(request, year: int):
     return HttpResponse(template.render(context, request))
 
 
+@user_passes_test(lambda user: user.is_staff)
 def sign_up(request, year: int, player_id: int):
     if request.method == "GET":
         return sign_up_form(request, year, player_id)
@@ -445,7 +447,6 @@ def sign_up_form(request, year: int, player_id: int):
 
 def handle_sign_up(request, year: int, player_id: int):
     params = request.POST
-    print(params)
     player = Player.objects.get(id=player_id)
     player.address = params.get("address")
     player.state = params.get("state")
@@ -488,6 +489,7 @@ def handle_sign_up(request, year: int, player_id: int):
                     doubles.playerB = partner_season
                 else:
                     doubles.playerA = partner_season
+                doubles.save()
             except Doubles.DoesNotExist:
                 Doubles.objects.create(playerA=season, playerB=partner_season, division=division)
         else:
@@ -497,6 +499,7 @@ def handle_sign_up(request, year: int, player_id: int):
 
     return redirect("/league/new_season/" + str(year))
 
+@user_passes_test(lambda user: user.is_staff)
 def create_player(request):
     params = request.POST
     first_name = params.get("first_name")
